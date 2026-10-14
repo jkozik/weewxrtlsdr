@@ -49,6 +49,93 @@ This repository creates three containers
 
 There's also a backup script that very nicely backs up the installation and database and sends a tar file to an external NAS.
 
+## Background on how weewx uses the RTL-SDR to decode the Vantage Pro2 RF signal
+
+A Davis Vantage Pro2 has no "data port" on the outdoor unit. The ISS (Integrated
+Sensor Suite) just broadcasts a short radio packet about every 2.5 seconds in the
+915 MHz band, hopping between 51 frequencies in a fixed pattern so it doesn't sit
+on one channel. Normally only Davis hardware (a console or an [Envoy](https://www.davisinstruments.com/products/wireless-weather-envoy?variant=39617694498977&country=US&currency=USD&utm_medium=product_sync&utm_source=google&utm_content=sag_organic&utm_campaign=sag_organic&gad_source=1&gad_campaignid=22288934145&gbraid=0AAAAADiof7MiQ1gZQZzfAPBlquInYB1Su&gclid=CjwKCAjw0LzWBhBOEiwAKQd0cPFJ-h__P3AafskidOSkV7Vg2JjJg5lwKgZxSaUVBomr7CV4GcCzWRoCBGwQAvD_BwE)) knows how to
+follow that hopping and read the packets.
+
+The creative part of this project is replacing that purpose-built receiver with a
+~$30 RTL-SDR.COM dongle, a TV-tuner chip that software can retune to almost any
+frequency, and doing the receiver's job in software. `rtldavis` tunes the dongle,
+follows the ISS's hop sequence, demodulates the raw radio signal into bits, checks
+each packet's CRC, and prints the good ones. The `weewx-rtldavis` driver runs
+`rtldavis` inside the weewx container, reads that output, and turns the bytes into
+weather values. Each packet carries wind speed and direction plus one other sensor
+(temperature, humidity, rain, solar, UV, battery) in rotation. weewx stores them
+like any other station. All of this rests on years of community work
+reverse-engineering the Davis protocol; see [Credits](#credits).
+
+```
+   Davis ISS                RTL-SDR dongle             weewx-rtldavis container
+ (outdoor sensors)          (USB stick)
+ ┌──────────────┐  radio   ┌──────────────┐   USB    ┌──────────────────────────┐
+ │ wind, temp,  │ ~~~~~~~> │ TV-tuner     │ ───────> │ librtlsdr                │
+ │ humidity,    │ 915 MHz  │ chip, tuned  │   raw    │   talks to the dongle    │
+ │ rain, solar, │ 51-chan  │ by software  │ samples  │            │             │
+ │ UV, battery  │ hopping  │              │          │            ▼             │
+ └──────────────┘  ~2.5 s  └──────────────┘          │ rtldavis                 │
+                                                     │   follow the hops,       │
+                                                     │   demodulate, check CRC  │
+                                                     │            │             │
+                                                     │            ▼             │
+                                                     │ weewx-rtldavis driver    │
+                                                     │   bytes → weather values │
+                                                     │            │             │
+                                                     │            ▼             │
+                                                     │ weewx                    │
+                                                     │   store, graph, report   │
+                                                     └──────────────────────────┘
+```
+
+## Background on how indoor temp/hum/pres is collected using M5StickC
+
+The RTL-SDR only hears the outdoor ISS. Indoor temperature, indoor humidity and
+barometric pressure never went over the radio: the Davis Envoy measured them with
+its own built-in sensors. Retiring the Envoy means losing those three readings,
+including the station's only barometer, so something else has to measure them.
+
+That something is a tiny ESP32 computer, an M5StickC PLUS2, with an M5Stack ENV III
+sensor unit plugged into it (an SHT30 for temperature and humidity, a QMP6988 for
+pressure). It runs a small firmware built with [ESPHome](https://esphome.io/): every
+30 seconds it reads the sensors and publishes the values over WiFi to an MQTT broker.
+
+MQTT works like a bulletin board. A publisher posts short messages under a named
+**topic**, which looks like a file path. The **broker** (the `mosquitto` container
+here) holds the latest message for each topic and forwards it to every
+**subscriber** that asked for that topic. The sensor and weewx never talk to each
+other directly, so either one can restart without breaking the other. To the
+software, each message is just a topic name plus a plain-text value:
+
+```
+m5-env3/sensor/indoor_temperature/state   22.9      (°C)
+m5-env3/sensor/indoor_humidity/state      64.4      (%)
+m5-env3/sensor/indoor_pressure/state      992.3     (hPa)
+```
+
+On the weewx side, the `MQTTSubscribeService` extension subscribes to those three
+topics, keeps the latest value of each, and adds them to every packet coming from
+the radio as `inTemp`, `inHumidity` and `pressure`. From then on weewx treats them
+like readings from a real Davis console. It also converts the raw station pressure
+into the sea-level barometer reading shown on the website.
+
+```
+  M5StickC PLUS2 + ENV III        mosquitto container          weewx container
+  (indoors, on WiFi)              (MQTT broker)
+ ┌───────────────────────┐       ┌─────────────────┐       ┌─────────────────────────┐
+ │ SHT30:   temp, hum    │       │                 │       │ MQTTSubscribeService    │
+ │ QMP6988: pressure     │ ────> │  holds topics,  │ ────> │   keeps latest values,  │
+ │                       │publish│  forwards each  │deliver│   adds them to every    │
+ │ ESPHome firmware:     │       │  message to     │       │   LOOP packet           │
+ │   every 30 s, read    │       │  subscribers    │       │            │            │
+ │   sensors, publish    │       │                 │       │            ▼            │
+ └───────────────────────┘       └─────────────────┘       │ weewx: inTemp,          │
+                                                           │   inHumidity, pressure  │
+                                                           └─────────────────────────┘
+```
+
 ## Recreating this from scratch
 
 ### 1. Host prerequisites (outside Docker — not covered by this repo)
