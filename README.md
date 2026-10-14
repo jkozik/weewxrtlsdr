@@ -1,5 +1,6 @@
 # weewxrtlsdr
-<img width="1674" height="941" alt="image" src="https://github.com/user-attachments/assets/3085b144-8813-4046-9fc2-7005e59d3289" />
+
+<img width="1659" height="939" alt="image" src="https://github.com/user-attachments/assets/58aec354-f720-48a7-9659-c5018d8d3a63" />
 
 
 | Link | What | Where configured |
