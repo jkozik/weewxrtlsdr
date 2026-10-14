@@ -1,0 +1,56 @@
+name: "weewxrtlsdr"
+
+services:
+  weewx:
+    build: .
+    container_name: weewx-rtldavis
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    group_add:
+      - "46"  # host's plugdev group, owner of the rtl-sdr udev-ruled device node
+    volumes:
+      - type: bind
+        source: ./data
+        target: /data
+    environment:
+      - TZ=America/Chicago
+      - LD_LIBRARY_PATH=/opt/rtldavis/lib
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto-weewxrtlsdr
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nginx-rtldavis
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./data/public_html:/usr/share/nginx/html:ro
+    depends_on:
+      weewx:
+        condition: service_started
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

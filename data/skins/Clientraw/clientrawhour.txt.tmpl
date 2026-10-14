@@ -1,0 +1,172 @@
+##errorCatcher Echo
+#*
+A template to generate clientrawhour.txt for the Saratoga Weather Website templates.
+
+Copyright (C) 2021-24 Gary Roderick                 gjroderick<at>gmail.com
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program.  If not, see http://www.gnu.org/licenses/.
+
+
+Description
+
+This template is part of the WeeWX-Saratoga extension and produces 
+clientrawhour.txt containing data for use with Saratoga Weather Website 
+templates.
+
+Pre-Requisites
+
+- WeeWX-Saratoga WeeWX extension
+- PyEphem for inclusion of ephemeris and insolation data
+
+Version: 0.1.10                                     Date: 1 July 2024
+
+*#
+#*
+Inline python code to setup/initialise a number of variables for use in the
+template
+*#
+#import time
+##
+#set $version = '0.1.10'
+## cache tagged stats required in clientrawhour
+#set $windSpeedMinuteArray = $minute.windSpeed.avgQuery
+#set $windGustMinuteArray = $minute.windGust.maxQuery
+#set $windDirMinuteArray = $minute.windDir.avgQuery
+#set $outTempMinuteArray = $minute.outTemp.avgQuery
+#set $outHumidityMinuteArray = $minute.outHumidity.avgQuery
+#set $barometerMinuteArray = $minute.barometer.avgQuery
+#set $rainMinuteArray = $minute.rain.sumQuery
+#set $datetimeMinuteArray = $minute.rain.datetimeQuery
+#set $radiationMinuteArray = $minute.radiation.avgQuery
+#set $radiationFifteenminuteArray = $fifteenminute.radiation.avgQuery
+#set $UVFifteenminuteArray = $fifteenminute.UV.avgQuery
+##
+#*
+   main template code
+   A few simple conventions:
+    - one field per line
+    - field numbers are commented at the start of each line
+    - each field ands with a space except for the EOR
+*#
+#*000*#12345 #slurp
+#*001*##*Last 60 Minutes Wind Speed. Min 01=60 min ago, Min 60=now*##slurp
+#for $i in range (60):
+#try
+$windSpeedMinuteArray[$i].knot.format(format_string="%.1f", add_label=False, localize=False) #slurp
+#except TypeError
+0 #slurp
+#except IndexError
+0 #slurp
+#end try
+#end for
+#*061*##*Last 60 Minutes Wind Gust. Min 01=60 min ago, Min 60=now*##slurp
+#for $i in range (60):
+#try
+$windGustMinuteArray[$i].knot.format(format_string="%.1f", add_label=False, localize=False) #slurp
+#except TypeError
+0 #slurp
+#except IndexError
+0 #slurp
+#end try
+#end for
+#*121*##*Last 60 Minutes Wind Direction. Min 01=60 min ago, Min 60=now*##slurp
+#for $i in range (60):
+#try
+$windDirMinuteArray[$i].format(format_string="%.0f", add_label=False, localize=False) #slurp
+#except TypeError
+0 #slurp
+#except IndexError
+0 #slurp
+#end try
+#end for
+#*181*##*Last 60 Minutes Outside Temp. Min 01=60 min ago, Min 60=now*##slurp
+#for $i in range (60):
+#try
+$outTempMinuteArray[$i].degree_C.format(format_string="%.1f", add_label=False, localize=False) #slurp
+#except TypeError
+0 #slurp
+#except IndexError
+0 #slurp
+#end try
+#end for
+#*241*##*Last 60 Minutes Outside Humidity. Min 01=60 min ago, Min 60=now*##slurp
+#for $i in range (60):
+#try
+$outHumidityMinuteArray[$i].format(format_string="%.0f", add_label=False, localize=False) #slurp
+#except TypeError
+0 #slurp
+#except IndexError
+0 #slurp
+#end try
+#end for
+#*301*##*Last 60 Minutes Barometer. Min 01=60 min ago, Min 60=now*##slurp
+#for $i in range (60):
+#try
+$barometerMinuteArray[$i].format(format_string="%.1f", add_label=False, localize=False) #slurp
+#except TypeError
+0 #slurp
+#except IndexError
+0 #slurp
+#end try
+#end for
+#*361*##*Last 60 Minutes Rain. Min 00=60 min ago, Min 59=now*##slurp
+#set $tt=time.localtime($current.dateTime.raw)
+#set $midnight_ts=time.mktime(($tt.tm_year, $tt.tm_mon, $tt.tm_mday, 0, 0, 0, 0, 0, -1))
+#try
+    #set $rain_accum = $ago60rain.mm.raw
+#except
+    #set $rain_accum = 0.0
+#end try
+#for $i in range (60):
+#try
+#set $rain_accum += $rainMinuteArray[$i].mm.raw
+#set $rain_accum_str = $skin_dict.Units.StringFormats.mm % $rain_accum
+$rain_accum_str #slurp
+#if $datetimeMinuteArray[$i].raw == $midnight_ts
+    #set $rain_accum = 0.0
+#end if
+#except (TypeError, IndexError)
+0.0 #slurp
+#end try
+#end for
+#*421*##*Last 60 Minutes Solar. Min 01=60 min ago, Min 60=now*##slurp
+#for $i in range (60):
+#try
+$radiationMinuteArray[$i].format(format_string="%.0f", add_label=False, localize=False) #slurp
+#except TypeError
+0 #slurp
+#except IndexError
+0 #slurp
+#end try
+#end for
+#*481*##*Last 24 Hours of 15 minute Solar Readings. Hr 01, Min 00=24 hr ago, Hr 24, Min 45=now*##slurp
+#for $i in range (96):
+#try
+$radiationFifteenminuteArray[$i].format(format_string="%.0f", add_label=False, localize=False) #slurp
+#except TypeError
+0 #slurp
+#except IndexError
+0 #slurp
+#end try
+#end for
+#*577*##*Last 24 Hours of 15 minute UV Readings. Hr 01, Min 00=24 hr ago, Hr 24, Min 45=now*##slurp
+#for $i in range (96):
+#try
+$UVFifteenminuteArray[$i].format(format_string="%.1f", add_label=False, localize=False) #slurp
+#except TypeError
+0 #slurp
+#except IndexError
+0 #slurp
+#end try
+#end for
+#*673*#!!WS$version!!#slurp
