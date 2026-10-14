@@ -1,4 +1,14 @@
 # weewxrtlsdr
+<img width="1674" height="941" alt="image" src="https://github.com/user-attachments/assets/3085b144-8813-4046-9fc2-7005e59d3289" />
+
+
+| Link | What | Where configured |
+|---|---|---|
+| Radio | Davis ISS, channel 1, US band → `rtldavis` | `weewx.conf` `[Rtldavis]` |
+| MQTT | `m5-env3/sensor/indoor_{temperature,humidity,pressure}/state` → inTemp, inHumidity, pressure | `weewx.conf` `[MQTTSubscribeService]`; broker = mosquitto container :1883 |
+| FTP | clientraw.txt, NOAA reports, PNGs → `192.168.100.208:30421` | `weewx.conf` `[[FTP]]` |
+| Web | local preview on :8080 | `docker-compose.yml` nginx |
+
 
 A second, independent weewx instance that decodes a Davis ISS transmitter
 directly over RF, using an RTL-SDR dongle and the `rtldavis` driver — side by
