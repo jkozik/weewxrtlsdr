@@ -3,6 +3,15 @@
 <img width="1659" height="939" alt="image" src="https://github.com/user-attachments/assets/58aec354-f720-48a7-9659-c5018d8d3a63" />
 
 
+I have a good old Davis Vantage Pro2 weather station.  It has been working great for years.  It serves [NapervilleWeather.com](https://NapervilleWeather.com). I want to retire:  the Davis Envoy receiver with the RTL-SDR.COM dongle and the Cumulus Windows 10 software with the Weewx weather application. 
+
+Above is the target architecture.  I plug a [RTL-SDR.COM](https://www.amazon.com/s?k=rtl+-+sdr&hvadid=694262491571&hvdev=c&hvexpln=67&hvlocphy=9021701&hvnetw=g&hvocijid=4284003291645549062--&hvqmt=e&hvrand=4284003291645549062&hvtargid=kwd-302602789869&hydadcr=13584_13388478&mcid=1299fef0be0c37399eb7e79df975d1fc&tag=googhydr-20&ref=pd_sl_7kmj3vvegp_e_p67) dongle into my Dell R330 server, I run [Weewx](https://weewx.com/) in an Ubuntu VM, I get indoor temperature, humidity and pressure data from an [M5 Stack's](https://www.amazon.com/M5Stack-M5StickC-Development-mounting-Accessories/dp/B0D6LF4GJL) [ENV-III](https://www.amazon.com/M5Stack-Temperature-Humidity-Pressure-QMP6988/dp/B0FNNGJ7QJ/ref=sr_1_1?crid=Q5HQ68Y9XAYO&dib=eyJ2IjoiMSJ9.AVYhxiB8dqJIaopL01jR4VMU4JRUd4ByEVE-23LbUnRjf4bBvq5Dq6YjgY-s-ljkGB3b_jfoPP72RxCMzqYjmFgaoIpZHBLPqVwnJzIGWP8.EchkyoI9fC2LjRI0iV5YGnY2TB0J_h4GIo2_elgx6Xk&dib_tag=se&keywords=ENV-3+sensor&qid=1792002036&s=electronics&sprefix=env-3+sensor%2Celectronics%2C129&sr=1-1) sensor pack over a [mosquito](https://mosquitto.org/)-based [MQTT](https://mqtt.org/) server.  
+
+The Weewx software collects the weather data, keeps it in a [SQLite](https://www.sqlite.org/) database.  Periodically it generates reports.  The reports are formated for an [NGINX](https://nginx.org/) server, at [weewxrtlsdr.kozik.net](https://weewxrtlsdr.kozik.net/)
+and also by using the [weewx-saratoga](https://github.com/ktrue/weewx-saratoga) extension it ftp's realtime reports, graphs and historical records to a container that runs the website [NapervilleWeather.com](https://napervilleweather.com/index.php) by using [Ken True's Saratoga Weather website template](https://saratoga-weather.org/scripts.php)s. 
+
+The table below summarizes the Ins/Outs:
+
 | Link | What | Where configured |
 |---|---|---|
 | Radio | Davis ISS, channel 1, US band → `rtldavis` | `weewx.conf` `[Rtldavis]` |
@@ -10,9 +19,10 @@
 | FTP | clientraw.txt, NOAA reports, PNGs → `192.168.100.208:30421` | `weewx.conf` `[[FTP]]` |
 | Web | local preview on :8080 | `docker-compose.yml` nginx |
 
-I have a good old Davis Vantage Pro2 weather station.  It has been working great for years.  It serves [NapervilleWeather.com](https://NapervilleWeather.com). I want to retire:  the Davis Envoy receiver with the RTL-SDR.COM dongle and the Cumulus Windows 10 software with the Weewx weather application. 
+This is just a piece of an end-to-end solution
+- The M5Stick-ENV3 is setup and programmed separately.  With source code stored in a future repository.
+- The NapervilleWeather.com website is programmed in a different repository.
 
-Above is the target architecture.  I plug a [RTL-SDR.COM](https://www.amazon.com/s?k=rtl+-+sdr&hvadid=694262491571&hvdev=c&hvexpln=67&hvlocphy=9021701&hvnetw=g&hvocijid=4284003291645549062--&hvqmt=e&hvrand=4284003291645549062&hvtargid=kwd-302602789869&hydadcr=13584_13388478&mcid=1299fef0be0c37399eb7e79df975d1fc&tag=googhydr-20&ref=pd_sl_7kmj3vvegp_e_p67) dongle into my Dell R330 server, I run [Weewx](https://weewx.com/) in an Ubuntu VM, I get indoor temperature, humidity and pressure data from an [M5 Stack's](https://www.amazon.com/M5Stack-M5StickC-Development-mounting-Accessories/dp/B0D6LF4GJL) [ENV-III](https://www.amazon.com/M5Stack-Temperature-Humidity-Pressure-QMP6988/dp/B0FNNGJ7QJ/ref=sr_1_1?crid=Q5HQ68Y9XAYO&dib=eyJ2IjoiMSJ9.AVYhxiB8dqJIaopL01jR4VMU4JRUd4ByEVE-23LbUnRjf4bBvq5Dq6YjgY-s-ljkGB3b_jfoPP72RxCMzqYjmFgaoIpZHBLPqVwnJzIGWP8.EchkyoI9fC2LjRI0iV5YGnY2TB0J_h4GIo2_elgx6Xk&dib_tag=se&keywords=ENV-3+sensor&qid=1792002036&s=electronics&sprefix=env-3+sensor%2Celectronics%2C129&sr=1-1) sensor pack over a [mosquito](https://mosquitto.org/)-based [MQTT](https://mqtt.org/) server.  
 
 
 A second, independent weewx instance that decodes a Davis ISS transmitter
