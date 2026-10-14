@@ -10,6 +10,8 @@
 | FTP | clientraw.txt, NOAA reports, PNGs → `192.168.100.208:30421` | `weewx.conf` `[[FTP]]` |
 | Web | local preview on :8080 | `docker-compose.yml` nginx |
 
+I have a good old Davis Vantage Pro2 weather station.  It has been working great for years.  It serves [NapervilleWeather.com](https://NapervilleWeather.com). I want to retire:  the Davis Envoy receiver and the Cumulus Windows 10 software.
+
 
 A second, independent weewx instance that decodes a Davis ISS transmitter
 directly over RF, using an RTL-SDR dongle and the `rtldavis` driver — side by
