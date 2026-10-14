@@ -42,6 +42,13 @@ container bundled in this repo's `docker-compose.yml`. weewx's
 `MQTTSubscribeService` (`weewx-mqtt/subscribe` extension) subscribes and
 merges the three values into every LOOP packet.
 
+This repository creates three containers
+- Weewx.  The main weather software plus extentions
+- Nginx.  The Weewx software generate weather graphes.  This nginx container serves them.
+- Mosquito.  A generic MQTT server.  This brings T/H/P indoor weather data to the Weewx application.
+
+There's also a backup script that very nicely backs up the installation and database and sends a tar file to an external NAS.
+
 ## Recreating this from scratch
 
 ### 1. Host prerequisites (outside Docker — not covered by this repo)
