@@ -262,3 +262,25 @@ produces.
   weewx51 script got the same 84-day retention.
 - Restore: untar, copy db/*.sdb into data/archive/ with the containers
   stopped, then copy the project/ tree back.
+
+## 2026-10-25 — One missing archive record, traced to a transient MQTT reconnect
+
+A Saratoga Template page flagged humidity as `--` on 2026-10-24 around
+11:35-11:40am Central. Investigation:
+
+- Confirmed the archive table has no row at all for the 11:35:00 interval
+  that day (`SELECT dateTime FROM archive WHERE dateTime BETWEEN ...`
+  simply skips from 11:30:00 to 11:40:00 — a clean 10-minute gap where
+  every other interval is 5 minutes). Not a null-valued row; the row never
+  got written.
+- This lines up exactly with an MQTT disconnect/reconnect on the
+  `m5-env3` topic logged at 11:36:24/11:37:24 that day (mosquitto/
+  mqttsubscribe reconnected cleanly on its own, but something in that
+  window kept the whole archive interval from being committed, not just
+  the MQTT-sourced fields).
+- No recurrence found anywhere else in the month's data; every other
+  archive interval checked, before and after, is intact.
+- Fix applied on the Saratoga Template (website) side: it now handles a
+  `--`/missing reading gracefully instead of surfacing it as an error.
+  Nothing changed on the weewxrtlsdr side for this — treated as a one-off
+  transient blip, not a recurring bug to chase further right now.
